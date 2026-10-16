@@ -29,3 +29,10 @@ playwright-report/
 # OS
 .DS_Store
 Thumbs.db
+
+# Private Documentation (Strictly Local)
+*_PRIVATE.html
+*private*
+private/
+docs_private/
+PROJECT_ARCHITECTURE_MANUAL.html
