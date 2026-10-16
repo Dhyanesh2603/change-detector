@@ -2,6 +2,7 @@ import json
 from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
+from sqlalchemy.orm import selectinload
 from app.models.detected_change import DetectedChange
 from app.models.website import Website
 from app.storage import get_storage_driver
@@ -15,13 +16,24 @@ class ChangeService:
 
     @staticmethod
     async def get_by_id(db: AsyncSession, change_id: int) -> Optional[DetectedChange]:
-        result = await db.execute(select(DetectedChange).where(DetectedChange.id == change_id))
+        result = await db.execute(
+            select(DetectedChange)
+            .options(
+                selectinload(DetectedChange.previous_snapshot),
+                selectinload(DetectedChange.current_snapshot)
+            )
+            .where(DetectedChange.id == change_id)
+        )
         return result.scalar_one_or_none()
 
     @staticmethod
     async def get_by_website(db: AsyncSession, website_id: int, limit: int = 50) -> List[DetectedChange]:
         result = await db.execute(
             select(DetectedChange)
+            .options(
+                selectinload(DetectedChange.previous_snapshot),
+                selectinload(DetectedChange.current_snapshot)
+            )
             .where(DetectedChange.website_id == website_id)
             .order_by(desc(DetectedChange.detected_at))
             .limit(limit)
@@ -32,6 +44,10 @@ class ChangeService:
     async def get_recent_by_user(db: AsyncSession, user_id: int, limit: int = 20) -> List[DetectedChange]:
         result = await db.execute(
             select(DetectedChange)
+            .options(
+                selectinload(DetectedChange.previous_snapshot),
+                selectinload(DetectedChange.current_snapshot)
+            )
             .join(Website, Website.id == DetectedChange.website_id)
             .where(Website.user_id == user_id)
             .order_by(desc(DetectedChange.detected_at))

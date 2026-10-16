@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Website, DetectedChange, DashboardSummary, NotificationChannel, NotificationLog } from "./types";
+import { User, Website, DetectedChange, DashboardSummary, NotificationChannel, NotificationLog, WebsiteUpdateData } from "./types";
 import { api, setTokens, getAccessToken } from "./api/client";
 import { Navbar } from "./components/layout/Navbar";
 import { Sidebar, NavTab } from "./components/layout/Sidebar";
@@ -158,7 +158,7 @@ export const App: React.FC = () => {
 
   const handleUpdateWebsite = async (
     id: number,
-    data: Partial<{ name: string; url: string; check_interval_minutes: number; is_active: boolean }>
+    data: WebsiteUpdateData
   ) => {
     const updated = await api.updateWebsite(id, data);
     setWebsites((prev) => prev.map((w) => (w.id === id ? { ...w, ...updated } : w)));
@@ -398,6 +398,11 @@ export const App: React.FC = () => {
             screenshotUrl={
               activeDiffChange.current_snapshot?.screenshot_path
                 ? `/api/v1/storage/${activeDiffChange.current_snapshot.screenshot_path}`
+                : undefined
+            }
+            previousScreenshotUrl={
+              activeDiffChange.previous_snapshot?.screenshot_path
+                ? `/api/v1/storage/${activeDiffChange.previous_snapshot.screenshot_path}`
                 : undefined
             }
           />

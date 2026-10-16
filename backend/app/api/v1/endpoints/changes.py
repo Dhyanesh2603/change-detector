@@ -73,6 +73,8 @@ async def get_change_detail(
         summary=change.summary,
         diff_data_path=change.diff_data_path,
         detected_at=change.detected_at,
+        previous_snapshot=change.previous_snapshot,
+        current_snapshot=change.current_snapshot,
         diff_details=diff_payload
     )
     return detail
