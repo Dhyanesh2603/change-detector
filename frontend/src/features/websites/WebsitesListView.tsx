@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Website, HealthStatus } from "../../types";
+import { Website, HealthStatus, WebsiteUpdateData } from "../../types";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -27,7 +27,7 @@ export interface WebsitesListViewProps {
   onDeleteWebsite: (id: number) => Promise<void>;
   onUpdateWebsite?: (
     websiteId: number,
-    data: Partial<{ name: string; url: string; check_interval_minutes: number; is_active: boolean }>
+    data: WebsiteUpdateData
   ) => Promise<void>;
   onSimulateChange?: (websiteId: number) => Promise<void>;
   checkingIds: Set<number>;
@@ -182,6 +182,11 @@ export const WebsitesListView: React.FC<WebsitesListViewProps> = ({
                           <Clock className="w-3 h-3 text-neutral-500" />
                           <span>Every {site.check_interval_minutes}m</span>
                         </div>
+                        {site.min_change_percentage ? (
+                          <div className="text-[10px] text-neutral-500 mt-0.5">
+                            &ge; {site.min_change_percentage}% threshold
+                          </div>
+                        ) : null}
                       </td>
 
                       <td className="py-2.5 px-3 whitespace-nowrap text-[11px]">

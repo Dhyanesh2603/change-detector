@@ -39,7 +39,10 @@ class WebsiteService:
             url=str(website_in.url).strip(),
             check_interval_minutes=website_in.check_interval_minutes,
             is_active=website_in.is_active,
-            status="PENDING"
+            status="PENDING",
+            min_change_percentage=getattr(website_in, "min_change_percentage", 0.0),
+            keyword_watchlist=getattr(website_in, "keyword_watchlist", None),
+            notify_on_downtime=getattr(website_in, "notify_on_downtime", True)
         )
         db.add(website)
         await db.flush()
@@ -70,6 +73,12 @@ class WebsiteService:
             website.check_interval_minutes = website_in.check_interval_minutes
         if website_in.is_active is not None:
             website.is_active = website_in.is_active
+        if website_in.min_change_percentage is not None:
+            website.min_change_percentage = website_in.min_change_percentage
+        if website_in.keyword_watchlist is not None:
+            website.keyword_watchlist = website_in.keyword_watchlist.strip() if website_in.keyword_watchlist else None
+        if website_in.notify_on_downtime is not None:
+            website.notify_on_downtime = website_in.notify_on_downtime
 
         await db.commit()
         await db.refresh(website)

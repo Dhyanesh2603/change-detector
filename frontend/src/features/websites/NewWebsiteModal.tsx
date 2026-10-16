@@ -12,6 +12,8 @@ export interface NewWebsiteModalProps {
     url: string;
     check_interval_minutes: number;
     ignored_selectors?: string[];
+    min_change_percentage?: number;
+    keyword_watchlist?: string;
   }) => Promise<void>;
 }
 
@@ -24,6 +26,9 @@ export const NewWebsiteModal: React.FC<NewWebsiteModalProps> = ({
   const [url, setUrl] = useState("");
   const [interval, setInterval] = useState(60);
   const [ignoredSelectors, setIgnoredSelectors] = useState("");
+  const [minChangePct, setMinChangePct] = useState(0);
+  const [keywordWatchlist, setKeywordWatchlist] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,11 +52,16 @@ export const NewWebsiteModal: React.FC<NewWebsiteModalProps> = ({
         url: url.trim(),
         check_interval_minutes: Number(interval),
         ignored_selectors: selectors,
+        min_change_percentage: minChangePct > 0 ? Number(minChangePct) : undefined,
+        keyword_watchlist: keywordWatchlist.trim() || undefined,
       });
       setName("");
       setUrl("");
       setInterval(60);
       setIgnoredSelectors("");
+      setMinChangePct(0);
+      setKeywordWatchlist("");
+      setShowAdvanced(false);
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to create monitor");
@@ -119,6 +129,47 @@ export const NewWebsiteModal: React.FC<NewWebsiteModalProps> = ({
           onChange={(e) => setIgnoredSelectors(e.target.value)}
           leftIcon={<Shield className="w-3.5 h-3.5" />}
         />
+
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-[11px] text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer flex items-center gap-1 font-medium"
+          >
+            <span>{showAdvanced ? "▾ Hide" : "▸ Show"} Alert Sensitivity & Trigger Rules (Optional)</span>
+          </button>
+
+          {showAdvanced && (
+            <div className="mt-2.5 p-3 rounded-md border border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-900/40 space-y-2.5">
+              <div className="space-y-1">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    Min Change Threshold: {minChangePct}%
+                  </span>
+                  <span className="text-neutral-500">
+                    {minChangePct === 0 ? "Alert on any change" : `>= ${minChangePct}% delta`}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={50}
+                  step={1}
+                  value={minChangePct}
+                  onChange={(e) => setMinChangePct(Number(e.target.value))}
+                  className="w-full accent-neutral-900 dark:accent-neutral-100 cursor-pointer"
+                />
+              </div>
+
+              <Input
+                label="Trigger Keyword Watchlist (Optional)"
+                placeholder="e.g. price, out of stock, shipping, discount"
+                value={keywordWatchlist}
+                onChange={(e) => setKeywordWatchlist(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
 
         <div className="pt-2 flex items-center justify-end gap-2 border-t border-neutral-200 dark:border-neutral-800">
           <Button type="button" variant="outline" size="sm" onClick={onClose}>

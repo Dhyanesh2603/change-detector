@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, Integer, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import String, Integer, Boolean, DateTime, Text, Float, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import TimeStampedModel
 
@@ -31,6 +31,11 @@ class Website(TimeStampedModel):
     last_changed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_status_code: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     last_error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Alert Sensitivity & Filter Rules
+    min_change_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    keyword_watchlist: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notify_on_downtime: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="websites")

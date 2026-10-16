@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Website, IgnoredRegion, Snapshot, DetectedChange } from "../../types";
+import { Website, IgnoredRegion, Snapshot, DetectedChange, WebsiteUpdateData } from "../../types";
 import { api } from "../../api/client";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
@@ -33,7 +33,7 @@ export interface WebsiteDetailModalProps {
   onViewChange: (changeId: number) => void;
   onUpdateWebsite?: (
     websiteId: number,
-    data: Partial<{ name: string; url: string; check_interval_minutes: number; is_active: boolean }>
+    data: WebsiteUpdateData
   ) => Promise<void>;
   onTriggerCheck?: (websiteId: number) => Promise<void>;
   onSimulateChange?: (websiteId: number) => Promise<void>;
@@ -62,6 +62,9 @@ export const WebsiteDetailModal: React.FC<WebsiteDetailModalProps> = ({
   const [editUrl, setEditUrl] = useState("");
   const [editInterval, setEditInterval] = useState(60);
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editMinChangePct, setEditMinChangePct] = useState<number>(0);
+  const [editKeywordWatchlist, setEditKeywordWatchlist] = useState<string>("");
+  const [editNotifyDowntime, setEditNotifyDowntime] = useState<boolean>(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSavedMessage, setSettingsSavedMessage] = useState<string | null>(null);
 
@@ -83,6 +86,9 @@ export const WebsiteDetailModal: React.FC<WebsiteDetailModalProps> = ({
       setEditUrl(website.url);
       setEditInterval(website.check_interval_minutes);
       setEditIsActive(website.is_active);
+      setEditMinChangePct(website.min_change_percentage ?? 0);
+      setEditKeywordWatchlist(website.keyword_watchlist ?? "");
+      setEditNotifyDowntime(website.notify_on_downtime ?? true);
       setSettingsSavedMessage(null);
       setInspectedSnapshot(null);
     }
@@ -115,6 +121,9 @@ export const WebsiteDetailModal: React.FC<WebsiteDetailModalProps> = ({
         url: editUrl.trim(),
         check_interval_minutes: Number(editInterval),
         is_active: editIsActive,
+        min_change_percentage: Number(editMinChangePct),
+        keyword_watchlist: editKeywordWatchlist.trim() || undefined,
+        notify_on_downtime: editNotifyDowntime,
       });
       setSettingsSavedMessage("Configuration saved successfully");
       setTimeout(() => setSettingsSavedMessage(null), 3000);
@@ -573,6 +582,63 @@ export const WebsiteDetailModal: React.FC<WebsiteDetailModalProps> = ({
                   </label>
                 </div>
               </div>
+            </div>
+
+            {/* Alert Trigger Rules & Sensitivity */}
+            <div className="p-3.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/40 space-y-3">
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                  Alert Sensitivity & Trigger Rules
+                </h4>
+                <p className="text-[11px] text-neutral-500 mt-0.5">
+                  Suppress noisy trivial updates and trigger alerts only when meaningful thresholds are met.
+                </p>
+              </div>
+
+              {/* Sensitivity slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-medium text-neutral-700 dark:text-neutral-300">
+                    Minimum Change Threshold: {editMinChangePct}%
+                  </label>
+                  <span className="text-[11px] text-neutral-500">
+                    {editMinChangePct === 0 ? "Alert on any detected mutation" : `Requires >= ${editMinChangePct}% DOM delta`}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={50}
+                  step={1}
+                  value={editMinChangePct}
+                  onChange={(e) => setEditMinChangePct(Number(e.target.value))}
+                  className="w-full accent-neutral-900 dark:accent-neutral-100 cursor-pointer"
+                />
+              </div>
+
+              {/* Keyword watchlist */}
+              <div className="space-y-1">
+                <Input
+                  label="Trigger Keyword Watchlist (Optional)"
+                  placeholder="e.g. price, out of stock, shipping, discount, v2.0"
+                  value={editKeywordWatchlist}
+                  onChange={(e) => setEditKeywordWatchlist(e.target.value)}
+                />
+                <p className="text-[10px] text-neutral-500">
+                  Comma-separated keywords. If set, notifications fire only when changed text contains one of these terms.
+                </p>
+              </div>
+
+              {/* Downtime alert toggle */}
+              <label className="flex items-center gap-2 cursor-pointer pt-1 text-xs text-neutral-800 dark:text-neutral-200 select-none">
+                <input
+                  type="checkbox"
+                  checked={editNotifyDowntime}
+                  onChange={(e) => setEditNotifyDowntime(e.target.checked)}
+                  className="rounded border-neutral-300 dark:border-neutral-700 accent-neutral-900 dark:accent-neutral-100"
+                />
+                <span>Instantly dispatch alert if page returns HTTP 4xx or 5xx downtime</span>
+              </label>
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2 border-t border-neutral-200 dark:border-neutral-800">

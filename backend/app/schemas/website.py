@@ -12,6 +12,9 @@ class WebsiteBase(BaseModel):
     url: str = Field(..., max_length=2048)
     check_interval_minutes: int = Field(60, ge=1, le=10080, description="Check frequency in minutes")
     is_active: bool = True
+    min_change_percentage: float = Field(0.0, ge=0.0, le=100.0, description="Minimum change % threshold to trigger alerts")
+    keyword_watchlist: Optional[str] = Field(None, description="Comma-separated trigger keywords")
+    notify_on_downtime: bool = True
 
 
 class WebsiteCreate(WebsiteBase):
@@ -23,6 +26,9 @@ class WebsiteUpdate(BaseModel):
     url: Optional[str] = Field(None, max_length=2048)
     check_interval_minutes: Optional[int] = Field(None, ge=1, le=10080)
     is_active: Optional[bool] = None
+    min_change_percentage: Optional[float] = Field(None, ge=0.0, le=100.0)
+    keyword_watchlist: Optional[str] = None
+    notify_on_downtime: Optional[bool] = None
 
 
 class WebsiteResponse(WebsiteBase):

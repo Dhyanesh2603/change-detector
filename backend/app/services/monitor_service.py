@@ -223,16 +223,20 @@ class MonitorService:
         website.last_error_message = None
         await db.commit()
 
-        # Dispatch alerts asynchronously
-        try:
-            await NotificationDispatcher.dispatch_change_alert(
-                db=db,
-                website=website,
-                change=detected_change,
-                summary=diff_result["summary"]
-            )
-        except Exception as alert_err:
-            logger.error(f"Error dispatching notifications for change {detected_change.id}: {alert_err}")
+        # Evaluate alert sensitivity rules
+        should_alert, suppression_reason = MonitorService._evaluate_alert_rules(website, diff_result)
+        if should_alert:
+            try:
+                await NotificationDispatcher.dispatch_change_alert(
+                    db=db,
+                    website=website,
+                    change=detected_change,
+                    summary=diff_result["summary"]
+                )
+            except Exception as alert_err:
+                logger.error(f"Error dispatching notifications for change {detected_change.id}: {alert_err}")
+        else:
+            logger.info(f"Notification suppressed for website {website.id}: {suppression_reason}")
 
         logger.info(
             f"Change recorded for website {website.id}: "
@@ -375,16 +379,20 @@ class MonitorService:
         website.last_error_message = None
         await db.commit()
 
-        # Dispatch alerts
-        try:
-            await NotificationDispatcher.dispatch_change_alert(
-                db=db,
-                website=website,
-                change=detected_change,
-                summary=diff_result["summary"]
-            )
-        except Exception as alert_err:
-            logger.error(f"Error dispatching notifications for simulated change: {alert_err}")
+        # Dispatch alerts with sensitivity check
+        should_alert, suppression_reason = MonitorService._evaluate_alert_rules(website, diff_result)
+        if should_alert:
+            try:
+                await NotificationDispatcher.dispatch_change_alert(
+                    db=db,
+                    website=website,
+                    change=detected_change,
+                    summary=diff_result["summary"]
+                )
+            except Exception as alert_err:
+                logger.error(f"Error dispatching notifications for simulated change: {alert_err}")
+        else:
+            logger.info(f"Notification suppressed for simulated change on website {website.id}: {suppression_reason}")
 
         return {
             "status": "changed",
@@ -395,3 +403,31 @@ class MonitorService:
             "lines_added": diff_result["lines_added"],
             "lines_removed": diff_result["lines_removed"]
         }
+
+    @staticmethod
+    def _evaluate_alert_rules(
+        website: Website,
+        diff_result: Dict[str, Any]
+    ) -> tuple[bool, Optional[str]]:
+        min_pct = getattr(website, "min_change_percentage", 0.0) or 0.0
+        pct = diff_result.get("change_percentage", 0.0)
+        if pct < min_pct:
+            return False, f"Change percentage ({pct}%) is below minimum threshold ({min_pct}%)."
+
+        watchlist = getattr(website, "keyword_watchlist", None)
+        if watchlist:
+            keywords = [k.strip().lower() for k in watchlist.split(",") if k.strip()]
+            if keywords:
+                all_changed = []
+                for c in diff_result.get("chunks", []):
+                    if c.get("type") in ("replace", "insert", "delete"):
+                        all_changed.extend(c.get("prev_lines", []))
+                        all_changed.extend(c.get("curr_lines", []))
+                changed_text_lower = " ".join(all_changed).lower()
+
+                matched = [k for k in keywords if k in changed_text_lower]
+                if not matched:
+                    return False, f"No watchlist keywords ({', '.join(keywords)}) were detected in altered content."
+                logger.info(f"Watchlist keywords matched for website {website.id}: {matched}")
+
+        return True, None

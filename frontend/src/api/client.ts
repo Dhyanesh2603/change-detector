@@ -124,10 +124,32 @@ export const api = {
   getWebsite: (id: number) =>
     request<Website>(`/websites/${id}`),
 
-  createWebsite: (body: { name: string; url: string; check_interval_minutes: number; ignored_selectors?: string[] }, sync = false) =>
+  createWebsite: (
+    body: {
+      name: string;
+      url: string;
+      check_interval_minutes: number;
+      ignored_selectors?: string[];
+      min_change_percentage?: number;
+      keyword_watchlist?: string;
+      notify_on_downtime?: boolean;
+    },
+    sync = false
+  ) =>
     request<Website>(`/websites?sync=${sync}`, { method: "POST", body: JSON.stringify(body) }),
 
-  updateWebsite: (id: number, body: Partial<{ name: string; url: string; check_interval_minutes: number; is_active: boolean }>) =>
+  updateWebsite: (
+    id: number,
+    body: Partial<{
+      name: string;
+      url: string;
+      check_interval_minutes: number;
+      is_active: boolean;
+      min_change_percentage: number;
+      keyword_watchlist?: string;
+      notify_on_downtime?: boolean;
+    }>
+  ) =>
     request<Website>(`/websites/${id}`, { method: "PUT", body: JSON.stringify(body) }),
 
   deleteWebsite: (id: number) =>
