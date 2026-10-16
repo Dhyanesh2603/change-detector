@@ -63,6 +63,11 @@ export interface DiffPayload {
   summary: string;
   unified_diff: string;
   chunks: DiffChunk[];
+  category?: string;
+  category_label?: string;
+  severity?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  executive_summary?: string;
+  key_entities?: string[];
 }
 
 export interface DetectedChange {
@@ -93,12 +98,25 @@ export interface Website {
   last_changed_at?: string;
   last_status_code?: number;
   last_error_message?: string;
+  min_change_percentage?: number;
+  keyword_watchlist?: string;
+  notify_on_downtime?: boolean;
   created_at: string;
   updated_at: string;
   ignored_regions?: IgnoredRegion[];
   recent_snapshots?: Snapshot[];
   recent_changes?: DetectedChange[];
 }
+
+export type WebsiteUpdateData = Partial<{
+  name: string;
+  url: string;
+  check_interval_minutes: number;
+  is_active: boolean;
+  min_change_percentage: number;
+  keyword_watchlist?: string;
+  notify_on_downtime?: boolean;
+}>;
 
 export interface NotificationChannel {
   id: number;
