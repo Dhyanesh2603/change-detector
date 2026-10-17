@@ -65,6 +65,106 @@ flowchart TD
 
 ---
 
+## Database Schema (Entity-Relationship Diagram)
+
+```mermaid
+erDiagram
+    USERS ||--o{ WEBSITES : "owns"
+    USERS ||--o{ NOTIFICATION_CHANNELS : "configures"
+    WEBSITES ||--o{ SNAPSHOTS : "records"
+    WEBSITES ||--o{ DETECTED_CHANGES : "tracks"
+    WEBSITES ||--o{ IGNORED_REGIONS : "filters"
+    SNAPSHOTS ||--o{ DETECTED_CHANGES : "baseline_for"
+    SNAPSHOTS ||--o{ DETECTED_CHANGES : "mutation_for"
+    DETECTED_CHANGES ||--o{ NOTIFICATIONS : "triggers"
+    NOTIFICATION_CHANNELS ||--o{ NOTIFICATIONS : "delivers"
+
+    USERS {
+        int id PK
+        string email UK
+        string hashed_password
+        string full_name
+        boolean is_active
+        boolean is_superuser
+        datetime created_at
+        datetime updated_at
+    }
+
+    WEBSITES {
+        int id PK
+        int user_id FK
+        string name
+        string url
+        int check_interval_minutes
+        boolean is_active
+        string status
+        float min_change_percentage
+        string keyword_watchlist
+        boolean notify_on_downtime
+        datetime last_checked_at
+        datetime last_changed_at
+    }
+
+    SNAPSHOTS {
+        int id PK
+        int website_id FK
+        string content_hash
+        string page_title
+        string raw_html_path
+        string normalized_text_path
+        string screenshot_path
+        int http_status
+        int response_time_ms
+        datetime created_at
+    }
+
+    DETECTED_CHANGES {
+        int id PK
+        int website_id FK
+        int previous_snapshot_id FK
+        int current_snapshot_id FK
+        float change_percentage
+        int lines_added
+        int lines_removed
+        string summary
+        string diff_data_path
+        datetime detected_at
+    }
+
+    IGNORED_REGIONS {
+        int id PK
+        int website_id FK
+        string selector_type
+        string selector_value
+        string description
+        boolean is_active
+        datetime created_at
+    }
+
+    NOTIFICATION_CHANNELS {
+        int id PK
+        int user_id FK
+        string channel_type
+        string name
+        string config_json
+        boolean is_enabled
+        datetime created_at
+    }
+
+    NOTIFICATIONS {
+        int id PK
+        int change_id FK
+        int channel_id FK
+        string status
+        string error_message
+        string payload_json
+        datetime sent_at
+        datetime created_at
+    }
+```
+
+---
+
 ## Core Capabilities
 
 ### 1. Real Browser Automation (Playwright)
