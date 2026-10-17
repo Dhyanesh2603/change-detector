@@ -6,8 +6,8 @@ __pycache__/
 .Python
 backend/venv/
 backend/.env
-backend/*.db
-backend/*.db-journal
+*.db
+*.db-journal
 backend/storage_data/
 backend/.pytest_cache/
 .coverage
