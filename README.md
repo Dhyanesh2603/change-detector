@@ -1,204 +1,286 @@
 # Website Change Detection Platform
 
-> A production-quality, developer-first website change detection and visual diff monitoring platform built as a clean Modular Monolith. Inspired by professional engineering tools like Better Stack, Datadog, Grafana, and Linear.
+A production-grade, developer-first website change monitoring and visual regression platform. Designed as a modular monolith providing real-browser DOM rendering, cryptographic content hashing, semantic change classification, visual split-screen comparisons, and alert suppression rules.
 
 ---
 
-## 🌟 Key Features
+## Overview
 
-- **Real Browser Rendering (Playwright):** Automates headless Chromium to execute client-side JavaScript, wait for network idle or DOMContentLoaded, and capture authentic Single Page Application (SPA) DOM state.
-- **Full-Page Visual Snapshots:** Captures high-resolution PNG screenshots alongside serialized HTML for side-by-side visual and DOM change inspection.
-- **Intelligent Noise Filtering:**
-  - Strips scripts, styles, iframes, SVGs, and tracking pixels.
-  - Automatically decomposes cookie banners, GDPR consent modals, and ads.
-  - Normalizes dynamic volatile content (timestamps, session tokens, live visitor counters) to static placeholders.
-  - Supports custom user-defined **CSS selectors** and **DOM ignored regions**.
-- **Deterministic Snapshot Lifecycle:** Computes SHA-256 hashes of normalized content. **Snapshots are only persisted when meaningful content changes occur**, preventing storage bloat.
-- **Developer Diff Engine:** Computes exact line additions, removals, modifications, mutation percentages, and structured side-by-side comparison chunks (`difflib.SequenceMatcher`).
-- **Multi-Channel Alert Dispatcher:** Concurrently delivers formatted change alerts to:
-  - **SMTP Email** (Responsive HTML + plain text)
-  - **Discord Webhooks** (Rich color-coded embed cards)
-  - **Telegram Bot** (Structured Markdown messages)
-- **Developer-Grade Interface:** Monochromatic, high-density, keyboard-friendly UI with zero generic AI gradients or marketing bloat. Built with React 19, Vite, Tailwind CSS v4, Lucide Icons, and Recharts.
-- **Dual Execution Engine:**
-  - **Production:** Distributed Celery workers + Redis + PostgreSQL + S3 storage.
-  - **Local Development:** Zero-dependency standalone execution with SQLite and in-process AsyncScheduler.
+The Website Change Detection Platform monitors web pages for visual, structural, and textual mutations. By utilizing headless Playwright browser automation rather than basic HTTP scrapers, the system handles single-page applications (SPAs), dynamic DOM changes, and client-side JavaScript execution.
+
+Captured snapshots are normalized to eliminate volatile noise (such as dynamic timestamps, cookie banners, and rotating advertisements). Content changes are evaluated against deterministic thresholds, categorized into semantic business impact tiers, and dispatched across configured notification channels.
 
 ---
 
-## 🏗️ Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph ClientLayer ["Frontend (React 19 + TypeScript + Vite)"]
-        Dashboard["Developer Dashboard & Metrics"]
-        Monitors["Monitor Management & Noise Filters"]
-        DiffViewer["Side-by-Side & Unified Diff Viewer"]
+    subgraph Client ["Frontend Client (React + TypeScript)"]
+        UI_Dashboard["Dashboard & Metrics"]
+        UI_DiffViewer["Visual & Code Diff Viewer"]
+        UI_Settings["Alert Rules & Watchlist Config"]
     end
 
-    subgraph APILayer ["Backend (FastAPI Modular Monolith)"]
-        AuthModule["JWT & HttpOnly Cookie Guard"]
-        V1Router["REST API v1 Endpoints"]
-        DomainServices["Domain Services (Monitor, Website, Snapshot, Change)"]
+    subgraph API ["Backend Application (FastAPI)"]
+        Router["REST API Router (v1)"]
+        AuthService["Authentication & JWT Security"]
+        MonitorService["Monitor & Orchestration Service"]
+        ChangeService["Change Intelligence & History"]
     end
 
-    subgraph DataStorage ["Data & Storage Layer"]
-        Database[("PostgreSQL / SQLite (3NF Schema)")]
-        StorageDriver["StorageDriver (Local Filesystem / S3)"]
+    subgraph Engine ["Processing & Diff Engine"]
+        BrowserWorker["Playwright Chromium Runner"]
+        Normalizer["DOM Sanitizer & Noise Filter"]
+        HashEngine["SHA-256 Digest Generator"]
+        DiffEngine["Heuristic Diff & Classifier"]
     end
 
-    subgraph WorkersScheduler ["Automation & Scheduling"]
-        Scheduler["AsyncSchedulerService / Celery Beat"]
-        Queue[("Redis Queue / In-Process Tasks")]
-        BrowserRunner["Playwright Headless Chromium Workers"]
+    subgraph Storage ["Persistence Layer"]
+        DB[("Database (SQLite / PostgreSQL)")]
+        DiskStorage["Storage Driver (Local Filesystem / S3)"]
     end
 
-    subgraph DiffSubsystem ["Diff & Normalization Subsystem"]
-        Normalizer["HTMLNormalizer (Noise Filtering)"]
-        HashEngine["HashEngine (SHA-256 Digest)"]
-        DiffEngine["DiffEngine (difflib SequenceMatcher)"]
+    subgraph Alerts ["Notification Subsystem"]
+        AlertEvaluator["Alert Rules & Keyword Filter"]
+        Dispatcher["Multi-Channel Dispatcher"]
+        Channels["Webhooks, Telegram, Email"]
     end
 
-    subgraph AlertingSubsystem ["Notification Dispatcher"]
-        Dispatcher["NotificationDispatcher"]
-        Email["SMTP Email"]
-        Discord["Discord Webhook"]
-        Telegram["Telegram Bot"]
-    end
-
-    ClientLayer <-->|REST API & Cookies| APILayer
-    APILayer --> DomainServices
-    DomainServices --> Database
-    DomainServices --> StorageDriver
-    Scheduler --> Queue
-    Queue --> BrowserRunner
-    BrowserRunner --> DomainServices
-    DomainServices --> Normalizer
+    Client <-->|REST API / JSON| API
+    Router --> MonitorService
+    MonitorService --> BrowserWorker
+    BrowserWorker --> Normalizer
     Normalizer --> HashEngine
     HashEngine --> DiffEngine
-    DomainServices --> Dispatcher
-    Dispatcher --> Email
-    Dispatcher --> Discord
-    Dispatcher --> Telegram
+    DiffEngine --> Storage
+    MonitorService --> AlertEvaluator
+    AlertEvaluator --> Dispatcher
+    Dispatcher --> Channels
+    API --> DB
+    API --> DiskStorage
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## Core Capabilities
 
-### Frontend
-- **React 19**
-- **TypeScript**
-- **Vite**
-- **Tailwind CSS v4**
-- **TanStack Query v5**
-- **Lucide Icons**
-- **Recharts**
+### 1. Real Browser Automation (Playwright)
+- Headless Chromium executes client-side JavaScript and waits for network idle or DOMContentLoaded states.
+- Captures full-page high-resolution PNG screenshots alongside sanitized DOM text.
+- Overcomes bot blocks and dynamic client-side hydration limitations.
+
+### 2. Intelligent DOM Normalization & Noise Filtering
+- Strips non-content elements: scripts, styles, iframes, SVG paths, and tracking pixels.
+- Automatically handles cookie banners, GDPR consent overlays, and dynamic ad containers.
+- Standardizes dynamic session tokens, dates, and visitor counters to prevent false-positive diffs.
+- Supports user-defined CSS selectors to monitor or ignore specific DOM subtrees.
+
+### 3. Visual Before/After Comparison Suite
+- **Draggable Split Slider:** Interactive split-screen view with a movable divider and dynamic CSS clipping to inspect visual shifts.
+- **Synchronized Dual View:** Side-by-side columns presenting baseline and current snapshot images with full-resolution review links.
+- **Opacity Blend Overlay:** Adjustable transparency layer (0% to 100%) to instantly highlight micro-layout shifts and CSS regressions.
+
+### 4. Smart Change Intelligence & Semantic Summaries
+- **Semantic Classification:** Categorizes detected mutations into business domains:
+  - `PRICING_UPDATE` (pricing tables, plan modifications, rate changes)
+  - `STOCK_AVAILABILITY` (in-stock, out-of-stock, inventory updates)
+  - `POLICY_TERMS` (terms of service, privacy policies, compliance disclosures)
+  - `FEATURE_RELEASE` (version announcements, changelogs, release notes)
+  - `MAJOR_REDESIGN` (large-scale layout restructuring)
+  - `CONTENT_COPY` (standard text and editorial refinements)
+- **Severity Ratings:** Dynamically assigned impact levels (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+- **Entity Extraction:** Identifies currency figures, price points, and affected product plans.
+- **Executive Summaries:** Generates concise plain-English descriptions of what changed.
+
+### 5. Alert Sensitivity & Keyword Watchlists
+- **Threshold Sensitivity:** Configurable minimum change percentage threshold (0.0% to 50.0%) to suppress trivial alerts.
+- **Keyword Watchlists:** Restricts notification triggers to high-priority terms (for example: `price`, `CVE`, `discount`, `out of stock`).
+- **Downtime Notifications:** Granular option to enable or mute HTTP 4xx/5xx offline alerts.
+- **Audit Preservation:** Changes below threshold are recorded in historical logs while suppressing notification delivery.
+
+### 6. Multi-Channel Alert Delivery
+- **Discord / Slack Webhooks:** Structured payload dispatch with change metrics and deep links.
+- **Telegram Bot:** Real-time messages with severity ratings and executive summaries.
+- **SMTP Email:** Clean HTML formatted notifications.
+- **Debounce Protection:** Rate-limiting mechanism to avoid alert floods during server flapping.
+
+---
+
+## Technology Stack
 
 ### Backend
-- **Python 3.13**
-- **FastAPI**
-- **SQLAlchemy 2.0 (Async)**
-- **Alembic**
-- **Pydantic v2**
-- **PostgreSQL / SQLite**
-- **Playwright (Chromium)**
-- **Celery 5.4 & Redis**
+- **Framework:** FastAPI (Python 3.12+)
+- **ORM / Database:** SQLAlchemy 2.0 (AsyncIO), SQLite (default) / PostgreSQL
+- **Browser Automation:** Playwright (Chromium)
+- **Authentication:** JWT (JSON Web Tokens) with passlib / bcrypt
+- **Task Scheduling:** Asynchronous background loop / Celery Beat ready
+- **Validation:** Pydantic v2
+
+### Frontend
+- **Framework:** React 18 / React 19
+- **Build Tool:** Vite
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Icons:** Lucide React
+- **Data Fetching:** Fetch API with custom client interceptors
 
 ---
 
-## 🚀 Quick Start Guide
+## Getting Started
 
-### Option 1: Local Development (Zero External Dependencies)
-
-#### 1. Backend Setup
-```bash
-cd backend
-
-# Create and activate virtual environment
-python -m venv venv
-# On Windows:
-.\venv\Scripts\Activate.ps1
-# On macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies and Playwright Chromium
-pip install -r requirements.txt
-playwright install chromium
-
-# Start FastAPI server (Database initializes automatically with AsyncScheduler)
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-API runs at: `http://127.0.0.1:8000`
-API Docs at: `http://127.0.0.1:8000/docs`
-
-#### 2. Frontend Setup
-```bash
-cd frontend
-
-# Install npm packages
-npm install
-
-# Start Vite development server
-npm run dev
-```
-Dashboard runs at: `http://localhost:5173`
+### Prerequisites
+- Python 3.12 or newer
+- Node.js 18 or newer
+- npm or yarn
 
 ---
 
-### Option 2: Docker Compose (Production Environment)
+### Backend Setup
 
-Run the entire distributed stack (PostgreSQL, Redis, FastAPI, Celery Worker, and Celery Beat):
+1. Navigate to the `backend` directory:
+   ```bash
+   cd backend
+   ```
 
-```bash
-cd backend
-docker compose up -d --build
-```
+2. Create and activate a Python virtual environment:
+   ```bash
+   # Windows (PowerShell)
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+
+   # Linux / macOS
+   python -m venv venv
+   source venv/bin/activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Install Playwright browser binaries:
+   ```bash
+   playwright install chromium
+   ```
+
+5. Initialize the database and launch the server:
+   ```bash
+   python run_server.py
+   ```
+   The backend API will start at `http://127.0.0.1:5000`. Interactive OpenAPI documentation is available at `http://127.0.0.1:5000/docs`.
 
 ---
 
-## 🧪 Running Automated Tests
+### Frontend Setup
 
-The backend includes comprehensive test coverage for diff calculations, noise normalization, authentication, and API endpoints:
+1. Navigate to the `frontend` directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm run dev -- --port 3001
+   ```
+   The frontend interface will be accessible at `http://localhost:3001`.
+
+---
+
+## Configuration
+
+Configuration values are managed via environment variables or a `.env` file located in the `backend/` directory:
+
+| Variable | Default Value | Description |
+| :--- | :--- | :--- |
+| `SECRET_KEY` | `dev_secret_key_change_in_production` | Cryptographic secret for signing JWTs |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./change_detector.db` | SQLAlchemy connection URI |
+| `STORAGE_DRIVER` | `local` | Storage driver (`local` or `s3`) |
+| `LOCAL_STORAGE_DIR` | `./storage_data` | Directory for storing snapshots and screenshots |
+| `DEFAULT_CHECK_INTERVAL_MINUTES` | `60` | Default periodic monitoring interval |
+| `MAX_CONCURRENT_CHECKS` | `3` | Maximum concurrent Playwright browser sessions |
+
+---
+
+## REST API Summary
+
+### Authentication
+- `POST /api/v1/auth/register` - Create user account
+- `POST /api/v1/auth/login` - Authenticate and receive Bearer JWT
+- `GET /api/v1/auth/me` - Retrieve current user profile
+
+### Monitored Websites
+- `GET /api/v1/websites` - List all monitored targets
+- `POST /api/v1/websites` - Register a new monitoring target
+- `GET /api/v1/websites/{id}` - Retrieve website details, snapshots, and diff history
+- `PUT /api/v1/websites/{id}` - Update check intervals, threshold rules, or watchlist
+- `DELETE /api/v1/websites/{id}` - Remove a target and its associated data
+- `POST /api/v1/websites/{id}/check` - Trigger an immediate manual check
+- `POST /api/v1/websites/{id}/simulate-change` - Test diff engine against sandbox mutations
+
+### Changes & Diffs
+- `GET /api/v1/changes/recent` - Global stream of detected changes
+- `GET /api/v1/changes/{id}` - Detailed change record with unified diff and snapshot paths
+
+### Notification Channels
+- `GET /api/v1/notifications/channels` - List configured alert destinations
+- `POST /api/v1/notifications/channels` - Add a webhook, Telegram, or email channel
+- `POST /api/v1/notifications/channels/{id}/test` - Dispatch a test ping
+
+---
+
+## Testing
+
+Run backend unit and integration tests:
 
 ```bash
 cd backend
 pytest -v
 ```
 
+Run frontend type checking and production build validation:
+
+```bash
+cd frontend
+npm run build
+```
+
 ---
 
-## 📚 Documentation Index
+## Project Structure
 
-Detailed architectural deep dives, database schema documentation, and file-by-file code explanations are maintained in the [`docs/`](file:///d:/pro_1/docs) folder:
+```text
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/          # Route handlers (auth, websites, changes, notifications)
+│   │   ├── core/            # Configuration and security settings
+│   │   ├── db/              # Database session and base models
+│   │   ├── diff/            # HTML normalization, hashing, and diff heuristics
+│   │   ├── models/          # SQLAlchemy ORM entity definitions
+│   │   ├── notifications/   # Dispatcher and channel integrations
+│   │   ├── schemas/         # Pydantic validation schemas
+│   │   ├── scraper/         # Playwright browser runner
+│   │   └── services/        # Business logic services
+│   ├── tests/               # Backend automated tests
+│   └── run_server.py        # Application entrypoint
+├── frontend/
+│   ├── src/
+│   │   ├── api/             # API client and request utilities
+│   │   ├── components/      # UI components (diff viewer, navigation, modals)
+│   │   ├── features/        # Feature modules (dashboard, websites, settings)
+│   │   └── types/           # TypeScript interface definitions
+│   ├── package.json
+│   └── vite.config.ts
+└── README.md
+```
 
-### System & Architecture Documents
-- [Architecture.md](file:///d:/pro_1/docs/Architecture.md) — System design, modular monolith pattern, sequence diagrams, and design trade-offs.
-- [Database.md](file:///d:/pro_1/docs/Database.md) — 3NF normalized schema, ER diagram, indexing strategy, and relationships.
-- [API.md](file:///d:/pro_1/docs/API.md) — RESTful API endpoints, request/response models, and auth mechanisms.
-- [Workflow.md](file:///d:/pro_1/docs/Workflow.md) — Snapshot lifecycle state machine and end-to-end check pipeline.
-- [Scheduler.md](file:///d:/pro_1/docs/Scheduler.md) — Periodic interval checking, Celery Beat, and In-Process AsyncScheduler.
-- [Playwright.md](file:///d:/pro_1/docs/Playwright.md) — Headless Chromium automation, network idle synchronization, and screenshot capture.
-- [DiffEngine.md](file:///d:/pro_1/docs/DiffEngine.md) — DOM sanitization, dynamic noise filters, SHA-256 hashing, and line diffing.
-- [Storage.md](file:///d:/pro_1/docs/Storage.md) — StorageDriver abstraction, path traversal security, and S3 migration guide.
-- [Authentication.md](file:///d:/pro_1/docs/Authentication.md) — JWT issuance, HttpOnly cookies, and Refresh Token Rotation.
-- [Notifications.md](file:///d:/pro_1/docs/Notifications.md) — Dispatcher architecture for Email, Discord webhooks, and Telegram bots.
-- [Deployment.md](file:///d:/pro_1/docs/Deployment.md) — Production deployment with Docker Compose, Railway, Vercel, and Cloud VPS.
-- [FolderStructure.md](file:///d:/pro_1/docs/FolderStructure.md) — Architectural boundaries and modular folder structure.
+---
 
-### Source Code Explanations (`docs/code-explanations/`)
-- [browser_runner.md](file:///d:/pro_1/docs/code-explanations/browser_runner.md) — Playwright headless browser runner.
-- [normalizer.md](file:///d:/pro_1/docs/code-explanations/normalizer.md) — HTML noise filtering and semantic text normalizer.
-- [diff_engine.md](file:///d:/pro_1/docs/code-explanations/diff_engine.md) — SequenceMatcher diff engine and metrics calculator.
-- [hash_engine.md](file:///d:/pro_1/docs/code-explanations/hash_engine.md) — SHA-256 cryptographic content digest engine.
-- [monitor_service.md](file:///d:/pro_1/docs/code-explanations/monitor_service.md) — Core monitoring check orchestrator.
-- [website_service.md](file:///d:/pro_1/docs/code-explanations/website_service.md) — Website entity management and scheduling queries.
-- [snapshot_service.md](file:///d:/pro_1/docs/code-explanations/snapshot_service.md) — Snapshot querying and asset loading.
-- [change_service.md](file:///d:/pro_1/docs/code-explanations/change_service.md) — Detected change querying and diff payload loading.
-- [user_service.md](file:///d:/pro_1/docs/code-explanations/user_service.md) — User registration and credential authentication.
-- [jwt_handler.md](file:///d:/pro_1/docs/code-explanations/jwt_handler.md) — JWT creation, claim decoding, and token rotation.
-- [auth_dependencies.md](file:///d:/pro_1/docs/code-explanations/auth_dependencies.md) — FastAPI Bearer and cookie auth dependencies.
-- [local_storage.md](file:///d:/pro_1/docs/code-explanations/local_storage.md) — Local filesystem storage driver.
-- [dispatcher.md](file:///d:/pro_1/docs/code-explanations/dispatcher.md) — Multi-channel notification dispatcher.
-- [scheduler_service.md](file:///d:/pro_1/docs/code-explanations/scheduler_service.md) — Asynchronous background scheduling service.
-- [celery_tasks.md](file:///d:/pro_1/docs/code-explanations/celery_tasks.md) — Celery task worker and Beat schedule definitions.
+## License
+
+This project is licensed under the MIT License.
