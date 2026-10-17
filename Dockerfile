@@ -13,7 +13,8 @@ RUN npm run build
 # ==========================================
 # Stage 2: Backend + Playwright + Static SPA
 # ==========================================
-FROM python:3.13-slim
+# Use Microsoft's official Playwright image (includes all browser dependencies pre-installed)
+FROM mcr.microsoft.com/playwright/python:v1.49.1-noble
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -21,31 +22,12 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install system dependencies required for Playwright and Chromium
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2t64 \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install Python backend dependencies
 COPY backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir -r backend/requirements.txt
-RUN playwright install --with-deps chromium
+
+# Ensure Chromium browser binary is installed
+RUN playwright install chromium
 
 # Copy Backend Source Code
 COPY backend/ ./backend/
