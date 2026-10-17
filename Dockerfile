@@ -1,5 +1,7 @@
 # ==========================================
-# Stage 1: Build Frontend Assets
+# Change Detector - Production Multi-Stage Build
+# Build Target: Railway / Docker (Ubuntu 24.04 Noble + Microsoft Playwright)
+# ==========================================
 # ==========================================
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
