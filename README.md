@@ -1,5 +1,7 @@
 # Website Change Detection Platform
 
+**Live Deployment:** [https://change-detector-production.up.railway.app](https://change-detector-production.up.railway.app)
+
 A production-grade, developer-first website change monitoring and visual regression platform. Designed as a modular monolith providing real-browser DOM rendering, cryptographic content hashing, semantic change classification, visual split-screen comparisons, and alert suppression rules.
 
 ---
