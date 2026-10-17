@@ -1,6 +1,6 @@
 import React from "react";
 import { User } from "../../types";
-import { LogOut, Plus, Sun, Moon, Sparkles } from "lucide-react";
+import { LogOut, Plus, Sun, Moon, Sparkles, ExternalLink } from "lucide-react";
 import { Button } from "../ui/Button";
 
 export interface NavbarProps {
@@ -51,6 +51,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* User Actions */}
       <div className="flex items-center gap-2.5">
+        <a
+          href="/demo-site"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800/80 dark:hover:bg-neutral-700/80 text-neutral-700 dark:text-neutral-200 transition-colors border border-neutral-200 dark:border-neutral-700/60"
+          title="Open Live Interactive Demo Target Website in new tab"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Demo Target Site</span>
+          <ExternalLink className="w-3 h-3 text-neutral-400" />
+        </a>
+
         {onOpenOnboarding && (
           <Button
             variant="ghost"
