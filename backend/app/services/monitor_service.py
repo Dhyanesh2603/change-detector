@@ -237,6 +237,15 @@ class MonitorService:
                 logger.error(f"Error dispatching notifications for change {detected_change.id}: {alert_err}")
         else:
             logger.info(f"Notification suppressed for website {website.id}: {suppression_reason}")
+            try:
+                await NotificationDispatcher.dispatch_suppressed_alert(
+                    db=db,
+                    website=website,
+                    change=detected_change,
+                    reason=suppression_reason or "Alert sensitivity criteria not met"
+                )
+            except Exception as supp_err:
+                logger.error(f"Error logging suppressed notification for change {detected_change.id}: {supp_err}")
 
         logger.info(
             f"Change recorded for website {website.id}: "
@@ -393,6 +402,15 @@ class MonitorService:
                 logger.error(f"Error dispatching notifications for simulated change: {alert_err}")
         else:
             logger.info(f"Notification suppressed for simulated change on website {website.id}: {suppression_reason}")
+            try:
+                await NotificationDispatcher.dispatch_suppressed_alert(
+                    db=db,
+                    website=website,
+                    change=detected_change,
+                    reason=suppression_reason or "Alert sensitivity criteria not met"
+                )
+            except Exception as supp_err:
+                logger.error(f"Error logging suppressed simulated notification: {supp_err}")
 
         return {
             "status": "changed",

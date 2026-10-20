@@ -11,6 +11,7 @@ from app.core.logging import logger
 class EmailNotifier(NotificationSender):
     """
     SMTP Email notification dispatcher with plain-text and HTML support.
+    Supports STARTTLS (port 587) and direct SSL (port 465).
     """
 
     async def send(self, config: Dict[str, Any], payload: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
@@ -18,12 +19,22 @@ class EmailNotifier(NotificationSender):
         if not to_email:
             return False, "Target recipient email is missing in channel configuration"
 
-        host = config.get("smtp_host") or settings.SMTP_HOST
-        port = int(config.get("smtp_port") or settings.SMTP_PORT)
-        user = config.get("smtp_user") or settings.SMTP_USER
-        password = config.get("smtp_password") or settings.SMTP_PASSWORD
-        from_email = config.get("from_email") or settings.SMTP_FROM_EMAIL
+        host = config.get("smtp_host") or settings.SMTP_HOST or "smtp.gmail.com"
+        port_val = config.get("smtp_port") or settings.SMTP_PORT or 587
+        try:
+            port = int(port_val)
+        except (ValueError, TypeError):
+            port = 587
+
+        user = (config.get("smtp_user") or settings.SMTP_USER or "").strip()
+        password = (config.get("smtp_password") or settings.SMTP_PASSWORD or "").strip()
         use_tls = config.get("use_tls", settings.SMTP_USE_TLS)
+
+        # Sender address: if not explicitly configured, default to authenticated user email or fallback
+        from_email = (
+            config.get("from_email")
+            or (user if user and "@" in user else settings.SMTP_FROM_EMAIL)
+        )
 
         website_name = payload.get("website_name", "Monitored Website")
         website_url = payload.get("website_url", "")
@@ -74,22 +85,51 @@ View full diff on your dashboard.
 
         def _send():
             if not user or not password:
-                # If credentials not provided in local dev, log simulation
-                logger.info(f"[Email Simulation] Would send alert to {to_email}: {subject}")
-                return True, None
+                err_msg = (
+                    "SMTP credentials not configured. Please provide SMTP Username & App Password "
+                    "in the channel settings or configure SMTP_USER & SMTP_PASSWORD in server environment variables. "
+                    "(For Gmail, use a 16-character Google App Password)."
+                )
+                logger.warning(f"[Email Dispatch Blocked] {err_msg}")
+                return False, err_msg
 
-            server = smtplib.SMTP(host, port, timeout=10)
+            server = None
             try:
-                if use_tls:
-                    server.starttls()
+                if port == 465:
+                    server = smtplib.SMTP_SSL(host, port, timeout=15)
+                else:
+                    server = smtplib.SMTP(host, port, timeout=15)
+                    if use_tls:
+                        server.starttls()
+
                 server.login(user, password)
                 server.send_message(msg)
+                logger.info(f"Successfully dispatched change notification email to {to_email}")
                 return True, None
+            except smtplib.SMTPAuthenticationError as auth_err:
+                err_text = (
+                    f"SMTP Authentication failed for user '{user}'. Please verify your username and password. "
+                    "For Gmail: Enable 2-Step Verification and use a 16-character App Password "
+                    "(Google Account > Security > 2-Step Verification > App Passwords), not your normal account password."
+                )
+                logger.error(f"{err_text} Details: {auth_err}")
+                return False, err_text
+            except (smtplib.SMTPConnectError, TimeoutError, OSError) as conn_err:
+                err_text = f"Could not connect to SMTP server {host}:{port}. Network/firewall error: {conn_err}"
+                logger.error(err_text)
+                return False, err_text
+            except Exception as exc:
+                logger.error(f"Failed to dispatch email: {exc}")
+                return False, str(exc)
             finally:
-                server.quit()
+                if server:
+                    try:
+                        server.quit()
+                    except Exception:
+                        pass
 
         try:
             return await anyio.to_thread.run_sync(_send)
         except Exception as e:
-            logger.error(f"Failed to dispatch email: {e}")
+            logger.error(f"Failed to dispatch email thread: {e}")
             return False, str(e)

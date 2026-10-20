@@ -132,7 +132,7 @@ export interface NotificationLog {
   id: number;
   change_id: number;
   channel_id: number;
-  status: "SENT" | "FAILED" | "PENDING";
+  status: "SENT" | "FAILED" | "PENDING" | "SUPPRESSED" | string;
   sent_at?: string;
   error_message?: string;
   created_at: string;

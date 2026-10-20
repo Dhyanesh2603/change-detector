@@ -89,3 +89,49 @@ class NotificationDispatcher:
 
         await db.commit()
         return notification_records
+
+    @staticmethod
+    async def dispatch_suppressed_alert(
+        db: AsyncSession,
+        website: Website,
+        change: DetectedChange,
+        reason: str
+    ) -> List[Notification]:
+        """
+        Creates audit log records marked as SUPPRESSED when alert rules
+        (minimum sensitivity threshold or keyword watchlists) suppress notification dispatch.
+        """
+        result = await db.execute(
+            select(NotificationChannel).where(
+                NotificationChannel.user_id == website.user_id,
+                NotificationChannel.is_enabled == True
+            )
+        )
+        channels = result.scalars().all()
+        if not channels:
+            return []
+
+        records: List[Notification] = []
+        payload = {
+            "website_id": website.id,
+            "website_name": website.name,
+            "website_url": website.url,
+            "change_id": change.id,
+            "change_percentage": change.change_percentage,
+            "suppression_reason": reason,
+        }
+
+        for channel in channels:
+            notif = Notification(
+                change_id=change.id,
+                channel_id=channel.id,
+                status="SUPPRESSED",
+                sent_at=None,
+                error_message=f"Suppressed: {reason}",
+                payload_json=json.dumps(payload)
+            )
+            db.add(notif)
+            records.append(notif)
+
+        await db.commit()
+        return records
